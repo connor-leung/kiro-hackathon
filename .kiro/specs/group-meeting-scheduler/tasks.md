@@ -44,7 +44,7 @@
   - Write tests for authentication flows and token management
   - _Requirements: 2.1, 2.3, 2.4, 6.2_
 
-- [ ] 6. Build calendar provider integration services
+- [x] 6. Build calendar provider integration services
 
   - Implement Google Calendar API integration with OAuth
   - Create Microsoft Graph API integration for Outlook calendars
