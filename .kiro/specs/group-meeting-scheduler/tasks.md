@@ -17,7 +17,7 @@
   - Create validation functions for iCal file format and required fields
   - _Requirements: 1.1, 1.2, 1.3_
 
-- [ ] 3. Build calendar data processing engine
+- [x] 3. Build calendar data processing engine
 
   - Implement CalendarEvent and ParticipantCalendar data models
   - Create functions to normalize calendar data from different sources
@@ -26,7 +26,7 @@
   - Add error handling for malformed calendar data
   - _Requirements: 1.2, 3.1, 3.2_
 
-- [ ] 4. Create meeting scheduling algorithm
+- [x] 4. Create meeting scheduling algorithm
 
   - Implement core scheduling engine to find available time slots
   - Build scoring system for ranking optimal meeting times
