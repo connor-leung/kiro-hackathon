@@ -582,3 +582,28 @@ export class ICalParser {
     return errors;
   }
 }
+
+/**
+ * Standalone function for parsing iCal content
+ * @param content - iCal content string
+ * @param participantName - Optional participant name
+ * @returns ParticipantCalendar object
+ */
+export function parseICalContent(
+  content: string,
+  participantName?: string
+): ParticipantCalendar {
+  return ICalParser.parseICalContent(content, participantName);
+}
+
+/**
+ * Standalone function for validating iCal content
+ * @param content - iCal content string
+ * @returns Validation result
+ */
+export function validateICalContent(content: string): {
+  isValid: boolean;
+  errors: string[];
+} {
+  return ICalParser.validateICalContent(content);
+}

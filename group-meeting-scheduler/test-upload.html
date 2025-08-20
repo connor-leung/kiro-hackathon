@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Upload Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .upload-area { border: 2px dashed #ccc; padding: 20px; text-align: center; margin: 20px 0; }
+        .upload-area.dragover { border-color: #007bff; background-color: #f8f9fa; }
+        .result { margin: 20px 0; padding: 15px; border-radius: 5px; }
+        .success { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .error { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        pre { background-color: #f8f9fa; padding: 10px; border-radius: 5px; overflow-x: auto; }
+        button { background-color: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 5px; }
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #6c757d; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+    <h1>File Upload API Test</h1>
+    
+    <div class="upload-area" id="uploadArea">
+        <p>Drag and drop iCal files here or click to select</p>
+        <input type="file" id="fileInput" multiple accept=".ics,.ical" style="display: none;">
+        <button onclick="document.getElementById('fileInput').click()">Select Files</button>
+    </div>
+    
+    <div>
+        <button onclick="uploadFiles()" id="uploadBtn" disabled>Upload Files</button>
+        <button onclick="getEndpointInfo()">Get Endpoint Info</button>
+        <button onclick="clearResults()">Clear Results</button>
+    </div>
+    
+    <div id="sessionControls" style="display: none;">
+        <h3>Session Controls</h3>
+        <button onclick="getSessionData()" id="getSessionBtn">Get Session Data</button>
+        <button onclick="deleteSession()" id="deleteSessionBtn">Delete Session</button>
+        <p>Session ID: <span id="sessionId"></span></p>
+    </div>
+    
+    <div id="results"></div>
+
+    <script>
+        let selectedFiles = [];
+        let currentSessionId = null;
+
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const results = document.getElementById('results');
+
+        // Drag and drop handlers
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+
+        function handleFiles(files) {
+            selectedFiles = Array.from(files);
+            uploadBtn.disabled = selectedFiles.length === 0;
+            
+            const fileList = selectedFiles.map(f => `${f.name} (${formatFileSize(f.size)})`).join(', ');
+            uploadArea.innerHTML = `
+                <p>Selected files: ${fileList}</p>
+                <button onclick="document.getElementById('fileInput').click()">Change Files</button>
+            `;
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        async function uploadFiles() {
+            if (selectedFiles.length === 0) {
+                addResult('error', 'No files selected');
+                return;
+            }
+
+            const formData = new FormData();
+            selectedFiles.forEach(file => {
+                formData.append('files', file);
+            });
+
+            try {
+                uploadBtn.disabled = true;
+                addResult('info', 'Uploading files...');
+
+                const response = await fetch('/api/calendars/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    addResult('success', 'Upload successful!');
+                    addResult('info', `<pre>${JSON.stringify(data, null, 2)}</pre>`);
+                    
+                    currentSessionId = data.sessionId;
+                    document.getElementById('sessionId').textContent = currentSessionId;
+                    document.getElementById('sessionControls').style.display = 'block';
+                } else {
+                    addResult('error', 'Upload failed');
+                    addResult('error', `<pre>${JSON.stringify(data, null, 2)}</pre>`);
+                }
+            } catch (error) {
+                addResult('error', `Upload error: ${error.message}`);
+            } finally {
+                uploadBtn.disabled = false;
+            }
+        }
+
+        async function getEndpointInfo() {
+            try {
+                const response = await fetch('/api/calendars/upload');
+                const data = await response.json();
+                
+                addResult('info', 'Endpoint Information:');
+                addResult('info', `<pre>${JSON.stringify(data, null, 2)}</pre>`);
+            } catch (error) {
+                addResult('error', `Error getting endpoint info: ${error.message}`);
+            }
+        }
+
+        async function getSessionData() {
+            if (!currentSessionId) {
+                addResult('error', 'No session ID available');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/calendars/${currentSessionId}`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addResult('success', 'Session data retrieved:');
+                    addResult('info', `<pre>${JSON.stringify(data, null, 2)}</pre>`);
+                } else {
+                    addResult('error', 'Failed to get session data');
+                    addResult('error', `<pre>${JSON.stringify(data, null, 2)}</pre>`);
+                }
+            } catch (error) {
+                addResult('error', `Error getting session data: ${error.message}`);
+            }
+        }
+
+        async function deleteSession() {
+            if (!currentSessionId) {
+                addResult('error', 'No session ID available');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/calendars/${currentSessionId}`, {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addResult('success', 'Session deleted successfully');
+                    addResult('info', `<pre>${JSON.stringify(data, null, 2)}</pre>`);
+                    
+                    currentSessionId = null;
+                    document.getElementById('sessionControls').style.display = 'none';
+                } else {
+                    addResult('error', 'Failed to delete session');
+                    addResult('error', `<pre>${JSON.stringify(data, null, 2)}</pre>`);
+                }
+            } catch (error) {
+                addResult('error', `Error deleting session: ${error.message}`);
+            }
+        }
+
+        function addResult(type, message) {
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.innerHTML = message;
+            results.appendChild(div);
+            results.scrollTop = results.scrollHeight;
+        }
+
+        function clearResults() {
+            results.innerHTML = '';
+        }
+
+        // Create a sample iCal file for testing
+        function createSampleFile() {
+            const sampleContent = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Test//Test//EN
+BEGIN:VEVENT
+UID:sample-event-1
+DTSTART:20240201T100000Z
+DTEND:20240201T110000Z
+SUMMARY:Sample Meeting
+DESCRIPTION:This is a sample meeting for testing
+LOCATION:Conference Room A
+STATUS:CONFIRMED
+END:VEVENT
+BEGIN:VEVENT
+UID:sample-event-2
+DTSTART:20240202T140000Z
+DTEND:20240202T150000Z
+SUMMARY:Another Meeting
+STATUS:TENTATIVE
+END:VEVENT
+END:VCALENDAR`;
+
+            const blob = new Blob([sampleContent], { type: 'text/calendar' });
+            const file = new File([blob], 'sample-calendar.ics', { type: 'text/calendar' });
+            handleFiles([file]);
+        }
+
+        // Add sample file button
+        document.addEventListener('DOMContentLoaded', () => {
+            const sampleBtn = document.createElement('button');
+            sampleBtn.textContent = 'Create Sample File';
+            sampleBtn.onclick = createSampleFile;
+            document.querySelector('div').appendChild(sampleBtn);
+        });
+    </script>
+</body>
+</html>
