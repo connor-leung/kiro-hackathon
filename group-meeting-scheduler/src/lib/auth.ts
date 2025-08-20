@@ -74,7 +74,7 @@ async function refreshAccessToken(token: Record<string, unknown>) {
         client_id: process.env.GOOGLE_CLIENT_ID!,
         client_secret: process.env.GOOGLE_CLIENT_SECRET!,
         grant_type: "refresh_token",
-        refresh_token: token.refreshToken,
+        refresh_token: token.refreshToken as string,
       });
     } else if (token.provider === "azure-ad") {
       url = `https://login.microsoftonline.com/${process.env.MICROSOFT_TENANT_ID}/oauth2/v2.0/token`;
@@ -82,7 +82,7 @@ async function refreshAccessToken(token: Record<string, unknown>) {
         client_id: process.env.MICROSOFT_CLIENT_ID!,
         client_secret: process.env.MICROSOFT_CLIENT_SECRET!,
         grant_type: "refresh_token",
-        refresh_token: token.refreshToken,
+        refresh_token: token.refreshToken as string,
       });
     } else {
       throw new Error("Unsupported provider for token refresh");

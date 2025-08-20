@@ -13,7 +13,7 @@ import {
   generateSafeFilename,
 } from "@/lib/file-validation";
 import { ICalParser } from "@/lib/ical-parser";
-import { processCalendarData } from "@/lib/calendar-processor";
+
 import { ErrorResponse, FileUploadResponse } from "@/types/api";
 import { ParticipantCalendar } from "@/types/calendar";
 

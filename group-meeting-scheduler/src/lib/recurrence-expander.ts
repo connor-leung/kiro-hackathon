@@ -139,25 +139,19 @@ export class RecurrenceExpander {
 
     try {
       const rrule = event.recurrence;
-      const dates = rrule.after(startDate, false, count);
+      const dates = rrule.between(
+        startDate,
+        new Date(startDate.getTime() + 365 * 24 * 60 * 60 * 1000),
+        true
+      );
 
-      if (Array.isArray(dates)) {
-        for (const date of dates) {
-          const endDate = new Date(date.getTime() + eventDuration);
-          occurrences.push({
-            ...event,
-            id: `${event.id}_${date.getTime()}`,
-            start: date,
-            end: endDate,
-          });
-        }
-      } else if (dates) {
-        // Single date returned
-        const endDate = new Date(dates.getTime() + eventDuration);
+      // rrule.between() always returns an array
+      for (const date of dates) {
+        const endDate = new Date(date.getTime() + eventDuration);
         occurrences.push({
           ...event,
-          id: `${event.id}_${dates.getTime()}`,
-          start: dates,
+          id: `${event.id}_${date.getTime()}`,
+          start: date,
           end: endDate,
         });
       }
