@@ -479,13 +479,13 @@ export class ICalParser {
    */
   private static parseByDay(byday: string): number[] {
     const dayMap: Record<string, number> = {
-      SU: RRule.SU.weekday,
-      MO: RRule.MO.weekday,
-      TU: RRule.TU.weekday,
-      WE: RRule.WE.weekday,
-      TH: RRule.TH.weekday,
-      FR: RRule.FR.weekday,
-      SA: RRule.SA.weekday,
+      SU: 0, // Sunday
+      MO: 1, // Monday
+      TU: 2, // Tuesday
+      WE: 3, // Wednesday
+      TH: 4, // Thursday
+      FR: 5, // Friday
+      SA: 6, // Saturday
     };
 
     return byday.split(",").map((day) => {

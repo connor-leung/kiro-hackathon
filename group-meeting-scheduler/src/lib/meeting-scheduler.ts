@@ -143,12 +143,17 @@ export class MeetingScheduler {
   ): Promise<Map<string, BusyPeriod[]>> {
     const busyPeriods = new Map<string, BusyPeriod[]>();
 
-    for (const participant of participants) {
-      const periods = await this.calendarProcessor.getBusyPeriods(
-        participant.events,
-        searchRange
-      );
-      busyPeriods.set(participant.participantId, periods);
+    // Get busy periods for all participants using CalendarProcessor
+    const conflictResult = CalendarProcessor.detectConflicts(
+      participants,
+      searchRange
+    );
+
+    // Group busy periods by participant
+    for (const period of conflictResult.busyPeriods) {
+      const existingPeriods = busyPeriods.get(period.participantId) || [];
+      existingPeriods.push(period);
+      busyPeriods.set(period.participantId, existingPeriods);
     }
 
     return busyPeriods;
