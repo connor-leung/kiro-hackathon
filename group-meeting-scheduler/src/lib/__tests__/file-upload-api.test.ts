@@ -362,8 +362,8 @@ describe("Upload Session Management", () => {
       "@/lib/upload-session"
     );
 
-    const session = createUploadSession();
-    const retrieved = getUploadSession(session.id);
+    const session = await createUploadSession();
+    const retrieved = await getUploadSession(session.id);
 
     expect(retrieved).toBeDefined();
     expect(retrieved?.id).toBe(session.id);
@@ -374,7 +374,7 @@ describe("Upload Session Management", () => {
   it("should return null for non-existent sessions", async () => {
     const { getUploadSession } = await import("@/lib/upload-session");
 
-    const result = getUploadSession("non-existent-id");
+    const result = await getUploadSession("non-existent-id");
     expect(result).toBeNull();
   });
 
@@ -382,11 +382,11 @@ describe("Upload Session Management", () => {
     const { createUploadSession, getUploadSession, deleteUploadSession } =
       await import("@/lib/upload-session");
 
-    const session = createUploadSession();
-    expect(getUploadSession(session.id)).toBeDefined();
+    const session = await createUploadSession();
+    expect(await getUploadSession(session.id)).toBeDefined();
 
-    const deleted = deleteUploadSession(session.id);
+    const deleted = await deleteUploadSession(session.id);
     expect(deleted).toBe(true);
-    expect(getUploadSession(session.id)).toBeNull();
+    expect(await getUploadSession(session.id)).toBeNull();
   });
 });
