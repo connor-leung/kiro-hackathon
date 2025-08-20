@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 import { ParticipantCalendar } from "@/types/calendar";
+import { redisCache } from "./redis-cache";
 
 /**
  * Interface for upload session data
@@ -26,15 +27,14 @@ export interface UploadedFile {
 }
 
 /**
- * In-memory session storage (in production, this would be Redis)
- * For now, using Map for development/testing
+ * In-memory session storage (fallback when Redis is not available)
  */
 const sessions = new Map<string, UploadSession>();
 
 /**
  * Create a new upload session
  */
-export function createUploadSession(): UploadSession {
+export async function createUploadSession(): Promise<UploadSession> {
   const sessionId = uuidv4();
   const now = new Date();
   const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours
@@ -47,16 +47,43 @@ export function createUploadSession(): UploadSession {
     uploadedFiles: [],
   };
 
-  sessions.set(sessionId, session);
+  // Try to store in Redis first, fallback to in-memory
+  if (redisCache.isAvailable()) {
+    const stored = await redisCache.setUploadSession(sessionId, session);
+    if (!stored) {
+      console.warn(
+        "Failed to store session in Redis, using in-memory fallback"
+      );
+      sessions.set(sessionId, session);
+    }
+  } else {
+    sessions.set(sessionId, session);
+  }
+
   return session;
 }
 
 /**
  * Get an upload session by ID
  */
-export function getUploadSession(sessionId: string): UploadSession | null {
-  const session = sessions.get(sessionId);
+export async function getUploadSession(
+  sessionId: string
+): Promise<UploadSession | null> {
+  // Try Redis first
+  if (redisCache.isAvailable()) {
+    const session = await redisCache.getUploadSession(sessionId);
+    if (session) {
+      // Check if session has expired
+      if (new Date() > session.expiresAt) {
+        await redisCache.deleteUploadSession(sessionId);
+        return null;
+      }
+      return session;
+    }
+  }
 
+  // Fallback to in-memory
+  const session = sessions.get(sessionId);
   if (!session) {
     return null;
   }
@@ -73,62 +100,111 @@ export function getUploadSession(sessionId: string): UploadSession | null {
 /**
  * Update an upload session
  */
-export function updateUploadSession(
+export async function updateUploadSession(
   sessionId: string,
   updates: Partial<UploadSession>
-): UploadSession | null {
-  const session = getUploadSession(sessionId);
+): Promise<UploadSession | null> {
+  const session = await getUploadSession(sessionId);
 
   if (!session) {
     return null;
   }
 
   const updatedSession = { ...session, ...updates };
-  sessions.set(sessionId, updatedSession);
+
+  // Update in Redis first, fallback to in-memory
+  if (redisCache.isAvailable()) {
+    const stored = await redisCache.setUploadSession(sessionId, updatedSession);
+    if (!stored) {
+      console.warn(
+        "Failed to update session in Redis, using in-memory fallback"
+      );
+      sessions.set(sessionId, updatedSession);
+    }
+  } else {
+    sessions.set(sessionId, updatedSession);
+  }
+
   return updatedSession;
 }
 
 /**
  * Add a participant to a session
  */
-export function addParticipantToSession(
+export async function addParticipantToSession(
   sessionId: string,
   participant: ParticipantCalendar
-): UploadSession | null {
-  const session = getUploadSession(sessionId);
+): Promise<UploadSession | null> {
+  const session = await getUploadSession(sessionId);
 
   if (!session) {
     return null;
   }
 
   session.participants.push(participant);
-  sessions.set(sessionId, session);
+
+  // Update in Redis first, fallback to in-memory
+  if (redisCache.isAvailable()) {
+    const stored = await redisCache.setUploadSession(sessionId, session);
+    if (!stored) {
+      console.warn(
+        "Failed to update session in Redis, using in-memory fallback"
+      );
+      sessions.set(sessionId, session);
+    }
+  } else {
+    sessions.set(sessionId, session);
+  }
+
   return session;
 }
 
 /**
  * Add an uploaded file to a session
  */
-export function addUploadedFileToSession(
+export async function addUploadedFileToSession(
   sessionId: string,
   file: UploadedFile
-): UploadSession | null {
-  const session = getUploadSession(sessionId);
+): Promise<UploadSession | null> {
+  const session = await getUploadSession(sessionId);
 
   if (!session) {
     return null;
   }
 
   session.uploadedFiles.push(file);
-  sessions.set(sessionId, session);
+
+  // Update in Redis first, fallback to in-memory
+  if (redisCache.isAvailable()) {
+    const stored = await redisCache.setUploadSession(sessionId, session);
+    if (!stored) {
+      console.warn(
+        "Failed to update session in Redis, using in-memory fallback"
+      );
+      sessions.set(sessionId, session);
+    }
+  } else {
+    sessions.set(sessionId, session);
+  }
+
   return session;
 }
 
 /**
  * Delete an upload session
  */
-export function deleteUploadSession(sessionId: string): boolean {
-  return sessions.delete(sessionId);
+export async function deleteUploadSession(sessionId: string): Promise<boolean> {
+  let deleted = false;
+
+  // Delete from Redis first
+  if (redisCache.isAvailable()) {
+    deleted = await redisCache.deleteUploadSession(sessionId);
+  }
+
+  // Also delete from in-memory (in case it exists there)
+  const memoryDeleted = sessions.delete(sessionId);
+
+  return deleted || memoryDeleted;
 }
 
 /**

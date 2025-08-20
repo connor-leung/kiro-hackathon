@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create a new upload session
-    const session = createUploadSession();
+    const session = await createUploadSession();
     const uploadErrors: string[] = [];
     const participants: ParticipantCalendar[] = [];
     let earliestDate: Date | null = null;
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
             processed: false,
             errors: validation.errors,
           };
-          addUploadedFileToSession(session.id, uploadedFile);
+          await addUploadedFileToSession(session.id, uploadedFile);
           continue;
         }
 
@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
             processed: false,
             errors: contentValidation.errors,
           };
-          addUploadedFileToSession(session.id, uploadedFile);
+          await addUploadedFileToSession(session.id, uploadedFile);
           continue;
         }
 
@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
         };
 
         // Add file to session
-        addUploadedFileToSession(session.id, uploadedFile);
+        await addUploadedFileToSession(session.id, uploadedFile);
 
         // Parse iCal content
         try {
@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
           );
 
           participants.push(participant);
-          addParticipantToSession(session.id, participant);
+          await addParticipantToSession(session.id, participant);
 
           // Update date range
           if (participant.events.length > 0) {

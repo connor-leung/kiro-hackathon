@@ -15,7 +15,7 @@ export async function GET(
   const { sessionId } = await params;
 
   try {
-    const session = getUploadSession(sessionId);
+    const session = await getUploadSession(sessionId);
 
     if (!session) {
       return NextResponse.json<ErrorResponse>(
@@ -136,7 +136,7 @@ export async function DELETE(
   const { sessionId } = await params;
 
   try {
-    const session = getUploadSession(sessionId);
+    const session = await getUploadSession(sessionId);
 
     if (!session) {
       return NextResponse.json<ErrorResponse>(
@@ -157,8 +157,8 @@ export async function DELETE(
     }
 
     // TODO: In production, also clean up Vercel Blob files
-    // For now, just delete the session from memory
-    const deleted = deleteUploadSession(sessionId);
+    // Delete the session from cache/memory
+    const deleted = await deleteUploadSession(sessionId);
 
     if (!deleted) {
       return NextResponse.json<ErrorResponse>(
